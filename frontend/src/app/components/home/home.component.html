@@ -1,0 +1,152 @@
+<div *ngIf="!searching " class="d-flex p - 2">
+    <div class="d-flex flex-column">
+        <div class="d-flex justify-content-left">
+            <h2 class="page-header">Ethereum crawler</h2>
+        </div>
+        <div *ngIf="error_msg" class="d-flex justify-content-center">
+            <h3 class="text-danger">{{error_msg}}</h3>
+        </div>
+        <div class="p-2">
+            <div *ngIf="!showBlockSearch">
+                <button class="btn btn-primary" (click)="toggleBlockSearch()">Get transcations associated with a wallet
+                    from the given block to the latest block</button>
+            </div>
+            <form class="mt-1" *ngIf="showBlockSearch" (submit)="getTransactionsByBlockNo()">
+                <h4>Get transcations associated with a wallet from the given block to the latest block</h4>
+                <div class="form-group">
+                    <label>Block number</label>
+                    <input type="text" [(ngModel)]="blockNo" name="blockNo" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" [(ngModel)]="address" name="address" class="form-control">
+                </div>
+                <input type="submit" class="btn btn-info" value="Search">
+            </form>
+            <br>
+            <div *ngIf=" showBlockSearch && transactions_returned">
+                <div *ngIf="!isContract" class="border border-success ">
+                    <label *ngIf="!isContract" class="d-inline mt-2"> Found {{transactions_number}} transactions for
+                        address: <label class="w-25 text-info">
+                            {{address}} </label></label>
+                    starting from block: <label class="w-25 text-info">{{blockNo}}</label>
+                </div>
+                <div *ngIf="isContract" class="border border-success">
+                    <label *ngIf="isContract" class="d-inline mt-2"> Found {{transactions_number}} transactions for
+                        contract address:
+                        <label class="w-25 text-info">
+                            {{address}} </label>
+                    </label>
+                    starting from block: <label class="w-25 text-info">{{blockNo}}</label>
+                </div>
+                <div class="mt-1" *ngIf="(transactions?.length > 0)">
+                    <table class="table">
+                        <thead>
+                            <th scope="col">Block number</th>
+                            <th scope="col">Hash</th>
+                            <th scope="col">Direction</th>
+                            <th scope="col">From</th>
+                            <th scope="col">To</th>
+                            <th scope="col">ETH value</th>
+                            <th scope="col">Transaction fee</th>
+                            <th scope="col">Token data</th>
+                        </thead>
+                        <tbody>
+                            <tr
+                                *ngFor="let item of transactions | slice: (currentPage-1) * itemsPerPage : currentPage * itemsPerPage">
+                                <td>{{item.blockNumber}}</td>
+                                <td>{{item.hash}}</td>
+                                <td>
+                                    <div *ngIf="address.toLowerCase() == item.from.toLowerCase()">
+                                        <label class="text-warning">OUT</label>
+                                    </div>
+                                    <div *ngIf="address.toLowerCase() != item.from.toLowerCase()">
+                                        <label class="text-success">IN</label>
+                                    </div>
+                                </td>
+                                <td>{{item.from}}</td>
+                                <td>{{item.to}}</td>
+                                <td>{{item.value}}</td>
+                                <td>{{item.tx_fee}}</td>
+                                <td *ngIf="(item.tokens) && (item.tokens.swap == false)">{{item.tokens.name}}
+                                    {{item.tokens.value}} Action: {{item.tokens.event_name}}</td>
+                                <td *ngIf="(item.tokens) && (item.tokens.swap == true)">
+                                    <div *ngIf="item.tokens.sent_value">
+                                        <div *ngIf="!item.tokens.recieved_name">Swapped {{item.tokens.name}}
+                                            {{item.tokens.sent_value}}<br>For {{item.tokens.value}} ETH</div>
+                                        <div *ngIf="item.tokens.recieved_name">Swapped {{item.tokens.sent_name}}
+                                            {{item.tokens.sent_value}}<br>For {{item.tokens.recieved_name}}
+                                            {{item.tokens.recieved_name}}</div>
+                                    </div>
+                                    <div *ngIf="!item.tokens.sent_value">
+                                        Swapped {{item.value}} ETH for {{item.tokens.value}} {{item.tokens.name}}
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" [itemsPerPage]="itemsPerPage"
+                        [boundaryLinks]="true" [maxSize]="10"></pagination><label for="fname">Show page:</label> <input
+                        [(ngModel)]="select_page" stype="number" id="fname" name="fname">
+                    <button class="btn btn-secondary" (click)="changeCurrentPage()">Jump</button>
+                </div>
+            </div>
+            <div *ngIf="showBlockSearch">
+                <button class="btn btn-secondary" (click)="toggleBlockSearch()">Hide</button>
+            </div>
+        </div>
+        <div class="p-2">
+            <div *ngIf="!showDateSearch">
+                <button class="btn btn-primary" (click)="toggleDateSearch()">Get balance of a wallet on a given
+                    date</button>
+            </div>
+            <form class="mt-1" *ngIf="showDateSearch" (submit)="getBalanceByDate()">
+                <h4>Get balance of a wallet on a given date</h4>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" max="{{selected_date | date:'yyyy-MM-dd'}}" [(ngModel)]="selected_date"
+                        name="date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" [(ngModel)]="address" name="address" class="form-control">
+                </div>
+                <input type="submit" class="btn btn-info" value="Search">
+            </form>
+            <div *ngIf="showDateSearch && balance_returned">
+                <div *ngIf="!isContract" class="border border-success ">
+                    <label *ngIf="!isContract" class="d-inline mt-2"> Found balance for address: <label
+                            class="w-25 text-info">
+                            {{address}} </label></label>
+                </div>
+                <div *ngIf="isContract" class="border border-success">
+                    <label *ngIf="isContract" class="d-inline mt-2"> Found balance for contract address:
+                        <label class="w-25 text-info">
+                            {{address}} </label></label>
+                </div>
+                <div class="mt-2 border border-primary">
+                    <label>ETH balance: <label class="w-25 text-primary"> {{balance}} </label></label>
+                </div>
+                <div *ngIf="token_balance.length>0" class="form-group border border-success">
+                    <label class="d-inline mt-2">Found token balance (*Will only show tokens that had transfers from the
+                        given date to
+                        today) :</label>
+                    <div *ngFor="let item of token_balance">
+                        <label class="d-inline mt-2 text-info">{{item.value}} {{item.name}} </label>
+                    </div>
+                </div>
+            </div>
+            <div *ngIf="showDateSearch">
+                <button class="btn btn-secondary" (click)="toggleDateSearch()">Hide</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div *ngIf="searching" class="d-flex justify-content-center">
+    <div class="d-flex flex-column">
+        <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem; z-index: 20;"></div>
+    </div>
+    <div class="d-flex flex-column">
+        <h3>Searching...</h3>
+    </div>
+</div>
